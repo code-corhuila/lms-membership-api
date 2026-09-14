@@ -5,6 +5,20 @@
 Part of the **LMS Library** distributed system — team `lms-library`, Grupo 2.
 Governance and documentation live in [`library-docs`](https://github.com/code-corhuila/library-docs).
 
+## Migration scope
+
+**Comes from** `lms-library` → `membership-service/`: `cmd/`, `internal/{domain,application,infrastructure}`,
+`go.mod`, `go.sum`, `Dockerfile`, `Makefile`.
+
+**Without `migrations/`** — the schema moves to `lms-membership-db`.
+
+Keep the hexagonal layout already in place: domain with its ports and tests, use cases in
+`application`, adapters in `infrastructure`.
+
+The full map lives in `library-docs`.
+
+---
+
 ## Branching
 
 Three permanent branches. **None of them accepts a direct commit** — you enter through a child
