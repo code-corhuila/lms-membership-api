@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	out "github.com/code-corhuila/lms-membership-api/internal/application/port/out"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/membership"
 )
 
@@ -11,10 +12,10 @@ import (
 // decides *when* to suspend; Membership owns *how* (mutating and persisting
 // its own aggregate).
 type SuspendStudent struct {
-	Students membership.StudentRepository
+	Students out.StudentRepository
 }
 
-func NewSuspendStudent(students membership.StudentRepository) *SuspendStudent {
+func NewSuspendStudent(students out.StudentRepository) *SuspendStudent {
 	return &SuspendStudent{Students: students}
 }
 

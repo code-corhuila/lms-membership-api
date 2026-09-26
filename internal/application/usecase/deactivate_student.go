@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	out "github.com/code-corhuila/lms-membership-api/internal/application/port/out"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/membership"
 )
 
@@ -11,13 +12,13 @@ import (
 // know about its own active loans directly
 // (library-docs/02-domain/entities-and-rules.md, Student.Deactivate). Before
 // the microservices split this was an in-process repository call; now it's
-// an HTTP call to circulation-service (membership.ActiveLoansChecker).
+// an HTTP call to circulation-service (out.ActiveLoansChecker).
 type DeactivateStudent struct {
-	Students    membership.StudentRepository
-	LoanChecker membership.ActiveLoansChecker
+	Students    out.StudentRepository
+	LoanChecker out.ActiveLoansChecker
 }
 
-func NewDeactivateStudent(students membership.StudentRepository, loanChecker membership.ActiveLoansChecker) *DeactivateStudent {
+func NewDeactivateStudent(students out.StudentRepository, loanChecker out.ActiveLoansChecker) *DeactivateStudent {
 	return &DeactivateStudent{Students: students, LoanChecker: loanChecker}
 }
 

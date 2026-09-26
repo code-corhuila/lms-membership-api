@@ -11,13 +11,14 @@ import (
 	"syscall"
 	"time"
 
+	httpserver "github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi"
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/handler"
+	circulationclient "github.com/code-corhuila/lms-membership-api/internal/adapter/out/circulationclient"
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/out/idempotency"
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/out/persistence"
 	"github.com/code-corhuila/lms-membership-api/internal/application/usecase"
 	"github.com/code-corhuila/lms-membership-api/internal/config"
-	circulationclient "github.com/code-corhuila/lms-membership-api/internal/infrastructure/circulation"
-	httpserver "github.com/code-corhuila/lms-membership-api/internal/infrastructure/http"
-	"github.com/code-corhuila/lms-membership-api/internal/infrastructure/http/handler"
 	"github.com/code-corhuila/lms-membership-api/internal/infrastructure/logger"
-	"github.com/code-corhuila/lms-membership-api/internal/infrastructure/postgres"
 )
 
 func main() {
@@ -43,17 +44,18 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	pool, err := postgres.NewPool(ctx, cfg.DSN())
+	pool, err := persistence.NewPool(ctx, cfg.DSN())
 	if err != nil {
 		log.Errorw("failed to connect to database", "error", err)
 		return err
 	}
 	defer pool.Close()
 
-	studentRepo := postgres.NewStudentRepository(pool)
+	studentRepo := persistence.NewStudentRepository(pool)
 	circulationClient := circulationclient.NewClient(cfg.CirculationServiceURL, cfg.JWTSecret)
+	idempotencyStore := idempotency.NewMemoryStore()
 
-	createStudentUseCase := usecase.NewCreateStudent(studentRepo)
+	createStudentUseCase := usecase.NewCreateStudent(studentRepo, idempotencyStore)
 	getStudentUseCase := usecase.NewGetStudent(studentRepo)
 	updateStudentUseCase := usecase.NewUpdateStudent(studentRepo)
 	deactivateStudentUseCase := usecase.NewDeactivateStudent(studentRepo, circulationClient)

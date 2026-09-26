@@ -1,7 +1,8 @@
-// Package circulation implements the membership.ActiveLoansChecker driven
-// port over HTTP — the replacement for the in-process LoanRepository call
-// that DeactivateStudent used before the microservices split.
-package circulation
+// Package circulationclient implements application/port/out.ActiveLoansChecker
+// over HTTP — the replacement for the in-process LoanRepository call that
+// DeactivateStudent used before the microservices split. Relocated from
+// internal/infrastructure/circulation to adapter/out (rules/2-anexos/C-api-hexagonal.md).
+package circulationclient
 
 import (
 	"context"

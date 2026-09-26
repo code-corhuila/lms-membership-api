@@ -3,16 +3,17 @@ package usecase
 import (
 	"context"
 
+	out "github.com/code-corhuila/lms-membership-api/internal/application/port/out"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/membership"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/shared"
 )
 
 // UpdateStudent implements HU-03, Scenario 1 (edit contact information).
 type UpdateStudent struct {
-	Students membership.StudentRepository
+	Students out.StudentRepository
 }
 
-func NewUpdateStudent(students membership.StudentRepository) *UpdateStudent {
+func NewUpdateStudent(students out.StudentRepository) *UpdateStudent {
 	return &UpdateStudent{Students: students}
 }
 

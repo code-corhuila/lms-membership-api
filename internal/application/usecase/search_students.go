@@ -3,15 +3,16 @@ package usecase
 import (
 	"context"
 
+	out "github.com/code-corhuila/lms-membership-api/internal/application/port/out"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/membership"
 )
 
 // SearchStudents implements the list/search half of HU-03.
 type SearchStudents struct {
-	Students membership.StudentRepository
+	Students out.StudentRepository
 }
 
-func NewSearchStudents(students membership.StudentRepository) *SearchStudents {
+func NewSearchStudents(students out.StudentRepository) *SearchStudents {
 	return &SearchStudents{Students: students}
 }
 
