@@ -16,29 +16,51 @@ validates the JWT issued by `lms-access-api` using the shared `JWT_SECRET` — n
 access-service is needed to check a token.
 
 Deactivating a student (HU-03) needs to know whether they have active loans — data that lives
-in circulation-service's own database. `internal/infrastructure/circulation/client.go` calls
+in circulation-service's own database. `internal/adapter/out/circulationclient/client.go` calls
 circulation-service's `GET /api/v1/loans?studentId=...&status=ACTIVE` over HTTP instead of
 joining the `loans` table directly.
+
+Structure and contract follow `rules/2-anexos/C-api-hexagonal.md` (the course's own repository
+norm) — see `ADR-010-liquibase-for-database-migrations.md` for the related `-db` decision.
 
 ## Structure
 
 ```
-cmd/api/                 → entry point (main.go)
+cmd/api/                       → entry point (main.go), the composition root
 internal/
 ├── domain/
-│   ├── membership/        → Student aggregate, StudentRepository port, ActiveLoansChecker port
-│   └── shared/             → Value Objects (Email) — duplicated per service, no shared Go module
-├── application/usecase/  → CreateStudent (HU-02), UpdateStudent/DeactivateStudent/SearchStudents (HU-03)
-├── config/                → environment variable loading
-└── infrastructure/
-    ├── http/               → chi router, middleware, handlers (primary adapters)
-    ├── postgres/            → StudentRepository (secondary adapter)
-    ├── circulation/          → HTTP client implementing ActiveLoansChecker
-    └── logger/                → structured (zap) logger
+│   ├── membership/             → Student aggregate — no port, no framework import
+│   └── shared/                  → Value Objects (Email) — duplicated per service, no shared Go module
+├── application/
+│   ├── port/
+│   │   ├── in/                  → inbound ports the HTTP adapter depends on (student_usecases.go)
+│   │   └── out/                 → outbound ports the use cases depend on (ports.go)
+│   └── usecase/                 → CreateStudent (HU-02), UpdateStudent/DeactivateStudent/SearchStudents (HU-03)
+├── config/                      → environment variable loading
+├── adapter/
+│   ├── in/httpapi/               → chi router, middleware, handlers, response envelope
+│   └── out/
+│       ├── persistence/           → StudentRepository against PostgreSQL
+│       ├── circulationclient/      → HTTP client implementing ActiveLoansChecker
+│       └── idempotency/             → provisional in-memory IdempotencyStore (see below)
+└── infrastructure/logger/        → structured (zap) logger — not a port implementation
 ```
 
 No `migrations/` here — the schema, seeds, and migration tooling live in `lms-membership-db`
 (`05-architecture/decisions/records/ADR-006-repo-per-context-decomposition.md`).
+
+## Known gaps against `rules/2-anexos/C-api-hexagonal.md`
+
+- **Idempotent creation is provisional.** `POST /students` honors `Idempotency-Key`, but
+  `internal/adapter/out/idempotency` is an in-memory map — it does not survive a restart and
+  does not coordinate across more than one running instance. The durable version needs
+  `lms-membership-db`'s own `idempotency_key` table, which doesn't exist yet
+  (`ADR-010-liquibase-for-database-migrations.md`).
+- **Auth stays HS256/shared-secret, not RS256/public-key.** Switching needs a coordinated change
+  with `lms-access-api` (the token issuer) — tracked separately, not done in this change.
+- **Not every validation error names its field.** `email` does; a generic domain-rule failure
+  (e.g. an empty `fullName`) still falls back to a bare `message` — the domain doesn't expose
+  which field caused it yet.
 
 ## Tech Stack
 
@@ -51,6 +73,12 @@ No `migrations/` here — the schema, seeds, and migration tooling live in `lms-
 ```bash
 go mod download
 go run ./cmd/api/...
+```
+
+Or standalone, against an already-running `lms-membership-db`:
+
+```bash
+docker compose -f deploy/compose.yml up --build
 ```
 
 Or, as part of the full assembled system (once `lms-infra` composes this repo alongside its

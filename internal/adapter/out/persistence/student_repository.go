@@ -1,4 +1,4 @@
-package postgres
+package persistence
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/code-corhuila/lms-membership-api/internal/domain/shared"
 )
 
-// StudentRepository implements membership.StudentRepository against
+// StudentRepository implements out.StudentRepository against
 // PostgreSQL — the only code allowed to touch the `students` table
 // (library-docs/09-microservices/service-boundary-rules.md).
 type StudentRepository struct {
