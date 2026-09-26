@@ -1,7 +1,9 @@
-// Package postgres holds the secondary (driven) adapters that implement each bounded
+// Package persistence holds the secondary (driven) adapters that implement each bounded
 // context's repository port against PostgreSQL — the single shared database in v1
 // (library-docs/05-architecture/decisions/records/ADR-002-hexagonal-modular-monolith.md).
-package postgres
+// Relocated from internal/infrastructure/postgres to match the folder name
+// rules/2-anexos/C-api-hexagonal.md expects for outbound persistence adapters.
+package persistence
 
 import (
 	"context"
