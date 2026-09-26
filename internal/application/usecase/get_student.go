@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	out "github.com/code-corhuila/lms-membership-api/internal/application/port/out"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/membership"
 )
 
@@ -11,10 +12,10 @@ import (
 // registering a loan, now that it can no longer query the `students` table
 // directly (library-docs/09-microservices/service-boundary-rules.md).
 type GetStudent struct {
-	Students membership.StudentRepository
+	Students out.StudentRepository
 }
 
-func NewGetStudent(students membership.StudentRepository) *GetStudent {
+func NewGetStudent(students out.StudentRepository) *GetStudent {
 	return &GetStudent{Students: students}
 }
 
