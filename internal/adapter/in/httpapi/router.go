@@ -7,8 +7,8 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/code-corhuila/lms-membership-api/internal/infrastructure/http/handler"
-	"github.com/code-corhuila/lms-membership-api/internal/infrastructure/http/middleware"
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/handler"
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/middleware"
 )
 
 // RouterConfig carries what the router needs to wire itself.
