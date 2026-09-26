@@ -1,0 +1,22 @@
+# Runs this service alone, against the env vars in ../.env — for local
+# development against an already-running lms-membership-db (its own
+# docker-compose.yml, per rules/2-anexos/A-db-postgres.md). lms-infra composes
+# every service together later (rules/2-anexos/G-infra.md); this file is not
+# that composition.
+services:
+  membership-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: membership-api
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - "${PORT:-8080}:8080"
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    external: true
