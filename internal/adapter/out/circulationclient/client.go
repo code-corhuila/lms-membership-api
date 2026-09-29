@@ -70,11 +70,13 @@ func (c *Client) CountActive(ctx context.Context, studentID string) (int, error)
 	return body.Meta.Total, nil
 }
 
-// mintServiceToken signs a short-lived internal token with the JWT_SECRET
-// shared by every service — the same secret access-service uses to issue
-// Administrator tokens. Circulation-service's RequireAuth middleware can't
-// tell this apart from a real Administrator session (v1 has no service-to-
-// service auth scope), which is an accepted trade-off for this project's size.
+// mintServiceToken signs a short-lived internal token with INTERNAL_JWT_SECRET
+// — deliberately not the RS256 key access-service uses for real Administrator
+// sessions (rules/2-anexos/C-api-hexagonal.md, numeral 5.3.7). Every service's
+// RequireAuth middleware still can't tell this apart from a request made on
+// behalf of a specific administrator, only from the general shape "some
+// authenticated caller" (v1 has no service-to-service auth scope beyond that),
+// which is an accepted trade-off for this project's size.
 func (c *Client) mintServiceToken() (string, error) {
 	now := time.Now().UTC()
 	claims := jwt.MapClaims{
