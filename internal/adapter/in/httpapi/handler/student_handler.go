@@ -254,7 +254,10 @@ func (h *StudentHandler) Deactivate(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusNotFound, "NOT_FOUND", "Student not found", traceID)
 		return
 	case errors.Is(err, membership.ErrStudentHasActiveLoansOrSuspension):
-		response.Error(w, http.StatusConflict, "STUDENT_HAS_ACTIVE_LOANS_OR_SUSPENSION",
+		// 422, not 409: the request is well-formed and doesn't collide with
+		// existing state — a domain rule forbids it outright
+		// (rules/2-anexos/C-api-hexagonal.md, numeral 5.3.11 / D-G08).
+		response.Error(w, http.StatusUnprocessableEntity, "STUDENT_HAS_ACTIVE_LOANS_OR_SUSPENSION",
 			"This student cannot be deactivated while they have active loans or an active suspension", traceID)
 		return
 	case err != nil:
