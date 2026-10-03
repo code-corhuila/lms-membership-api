@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // StudentRepository implements out.StudentRepository against
-// PostgreSQL — the only code allowed to touch the `students` table
+// PostgreSQL — the only code allowed to touch the `membership.student` table
 // (library-docs/09-microservices/service-boundary-rules.md).
 type StudentRepository struct {
 	db *pgxpool.Pool
@@ -38,7 +39,15 @@ func scanStudent(row pgx.Row) (*membership.Student, error) {
 }
 
 func (r *StudentRepository) FindByID(ctx context.Context, id string) (*membership.Student, error) {
-	query := `SELECT ` + studentColumns + ` FROM students WHERE id = $1`
+	// A malformed id (not a UUID at all) is "not found", not a server error —
+	// without this, postgres's own "invalid input syntax for type uuid"
+	// surfaces as a raw driver error the handler can't distinguish from a
+	// real failure, and the caller gets a 500 for what's really a 404/400.
+	if _, err := uuid.Parse(id); err != nil {
+		return nil, membership.ErrStudentNotFound
+	}
+
+	query := `SELECT ` + studentColumns + ` FROM membership.student WHERE id = $1`
 	s, err := scanStudent(r.db.QueryRow(ctx, query, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, membership.ErrStudentNotFound
@@ -47,7 +56,7 @@ func (r *StudentRepository) FindByID(ctx context.Context, id string) (*membershi
 }
 
 func (r *StudentRepository) FindByDocumentID(ctx context.Context, documentID string) (*membership.Student, error) {
-	query := `SELECT ` + studentColumns + ` FROM students WHERE document_id = $1`
+	query := `SELECT ` + studentColumns + ` FROM membership.student WHERE document_id = $1`
 	s, err := scanStudent(r.db.QueryRow(ctx, query, documentID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, membership.ErrStudentNotFound
@@ -57,7 +66,7 @@ func (r *StudentRepository) FindByDocumentID(ctx context.Context, documentID str
 
 func (r *StudentRepository) Search(ctx context.Context, q string, page, limit int) ([]*membership.Student, int, error) {
 	offset := (page - 1) * limit
-	query := `SELECT ` + studentColumns + ` FROM students
+	query := `SELECT ` + studentColumns + ` FROM membership.student
 		WHERE deactivated_at IS NULL AND (full_name ILIKE $1 OR document_id ILIKE $1)
 		ORDER BY full_name LIMIT $2 OFFSET $3`
 
@@ -77,7 +86,7 @@ func (r *StudentRepository) Search(ctx context.Context, q string, page, limit in
 	}
 
 	var total int
-	countQuery := `SELECT count(*) FROM students WHERE deactivated_at IS NULL AND (full_name ILIKE $1 OR document_id ILIKE $1)`
+	countQuery := `SELECT count(*) FROM membership.student WHERE deactivated_at IS NULL AND (full_name ILIKE $1 OR document_id ILIKE $1)`
 	if err := r.db.QueryRow(ctx, countQuery, "%"+q+"%").Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -87,7 +96,7 @@ func (r *StudentRepository) Search(ctx context.Context, q string, page, limit in
 
 func (r *StudentRepository) Save(ctx context.Context, s *membership.Student) error {
 	const query = `
-		INSERT INTO students (id, full_name, document_id, email, phone, suspended_until, deactivated_at, created_at, updated_at)
+		INSERT INTO membership.student (id, full_name, document_id, email, phone, suspended_until, deactivated_at, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8, $9)
 		ON CONFLICT (id) DO UPDATE SET
 			full_name = EXCLUDED.full_name,

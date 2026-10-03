@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"crypto/rsa"
 	"net/http"
 	"strings"
 
@@ -10,13 +11,17 @@ import (
 
 type administratorIDKey struct{}
 
-// RequireAuth validates the Bearer JWT on every request it wraps — NGINX does not do
-// this (library-docs/05-architecture/decisions/records/ADR-003-nginx-reverse-proxy.md);
-// library-api always validates its own tokens.
-//
-// The token is issued by the access module once HU-01 (login) is implemented; this
-// middleware only verifies an already-issued token's signature and expiry.
-func RequireAuth(secret string) func(http.Handler) http.Handler {
+// RequireAuth accepts exactly two algorithms, each with its own dedicated key
+// — never "whatever alg the token declares" against one shared secret, which
+// is the classic hole (rules/2-anexos/C-api-hexagonal.md, numeral 5.3.7,
+// "Errores frecuentes"): RS256 (a real Administrator session, verified with
+// lms-access-api's public key) or HS256 (an internal service-to-service call,
+// verified with a secret this service never uses for anything else). Because
+// the keyfunc below branches on token.Method before it ever returns key
+// material, an attacker can't take the public key's own bytes and replay them
+// as an HMAC secret to forge a signature — that confusion only works if a
+// single keyfunc returns the same value regardless of algorithm.
+func RequireAuth(publicKey *rsa.PublicKey, internalSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			header := r.Header.Get("Authorization")
@@ -28,8 +33,15 @@ func RequireAuth(secret string) func(http.Handler) http.Handler {
 
 			claims := jwt.MapClaims{}
 			token, err := jwt.ParseWithClaims(parts[1], claims, func(t *jwt.Token) (interface{}, error) {
-				return []byte(secret), nil
-			})
+				switch t.Method.(type) {
+				case *jwt.SigningMethodRSA:
+					return publicKey, nil
+				case *jwt.SigningMethodHMAC:
+					return []byte(internalSecret), nil
+				default:
+					return nil, jwt.ErrTokenSignatureInvalid
+				}
+			}, jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg(), jwt.SigningMethodHS256.Alg()}))
 			if err != nil || !token.Valid {
 				writeUnauthorized(w)
 				return
