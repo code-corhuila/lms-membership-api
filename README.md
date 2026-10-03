@@ -40,24 +40,27 @@ internal/
 ├── adapter/
 │   ├── in/httpapi/               → chi router, middleware, handlers, response envelope
 │   └── out/
-│       ├── persistence/           → StudentRepository against PostgreSQL
-│       ├── circulationclient/      → HTTP client implementing ActiveLoansChecker
-│       └── idempotency/             → provisional in-memory IdempotencyStore (see below)
+│       ├── persistence/           → StudentRepository and IdempotencyStore, both against PostgreSQL
+│       └── circulationclient/      → HTTP client implementing ActiveLoansChecker
 └── infrastructure/logger/        → structured (zap) logger — not a port implementation
 ```
 
 No `migrations/` here — the schema, seeds, and migration tooling live in `lms-membership-db`
 (`05-architecture/decisions/records/ADR-006-repo-per-context-decomposition.md`).
 
+## Authentication
+
+Two algorithms, each with its own key (`rules/2-anexos/C-api-hexagonal.md`, numeral 5.3.7):
+**RS256**, verified with `lms-access-api`'s public key (`JWT_PUBLIC_KEY`), for a real
+Administrator session; **HS256**, verified with a separate `INTERNAL_JWT_SECRET`, only for the
+tokens `internal/adapter/out/circulationclient` mints to call `lms-circulation-api`. Never the
+same key for both — see `internal/adapter/in/httpapi/middleware/auth.go`'s doc comment for why.
+
 ## Known gaps against `rules/2-anexos/C-api-hexagonal.md`
 
-- **Idempotent creation is provisional.** `POST /students` honors `Idempotency-Key`, but
-  `internal/adapter/out/idempotency` is an in-memory map — it does not survive a restart and
-  does not coordinate across more than one running instance. The durable version needs
-  `lms-membership-db`'s own `idempotency_key` table, which doesn't exist yet
-  (`ADR-010-liquibase-for-database-migrations.md`).
-- **Auth stays HS256/shared-secret, not RS256/public-key.** Switching needs a coordinated change
-  with `lms-access-api` (the token issuer) — tracked separately, not done in this change.
+- **Idempotent creation is durable now, not provisional.** `POST /students` honors
+  `Idempotency-Key` against `membership.idempotency_key` (`lms-membership-db`) — survives a
+  restart and coordinates across instances, since it's a real table, not an in-memory map.
 - **Not every validation error names its field.** `email` does; a generic domain-rule failure
   (e.g. an empty `fullName`) still falls back to a bare `message` — the domain doesn't expose
   which field caused it yet.

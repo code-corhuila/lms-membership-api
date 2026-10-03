@@ -14,7 +14,6 @@ import (
 	httpserver "github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi"
 	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/handler"
 	circulationclient "github.com/code-corhuila/lms-membership-api/internal/adapter/out/circulationclient"
-	"github.com/code-corhuila/lms-membership-api/internal/adapter/out/idempotency"
 	"github.com/code-corhuila/lms-membership-api/internal/adapter/out/persistence"
 	"github.com/code-corhuila/lms-membership-api/internal/application/usecase"
 	"github.com/code-corhuila/lms-membership-api/internal/config"
@@ -52,8 +51,8 @@ func run() error {
 	defer pool.Close()
 
 	studentRepo := persistence.NewStudentRepository(pool)
-	circulationClient := circulationclient.NewClient(cfg.CirculationServiceURL, cfg.JWTSecret)
-	idempotencyStore := idempotency.NewMemoryStore()
+	circulationClient := circulationclient.NewClient(cfg.CirculationServiceURL, cfg.InternalJWTSecret)
+	idempotencyStore := persistence.NewIdempotencyStore(pool)
 
 	createStudentUseCase := usecase.NewCreateStudent(studentRepo, idempotencyStore)
 	getStudentUseCase := usecase.NewGetStudent(studentRepo)
@@ -64,10 +63,11 @@ func run() error {
 	studentHandler := handler.NewStudentHandler(createStudentUseCase, getStudentUseCase, updateStudentUseCase, deactivateStudentUseCase, searchStudentsUseCase, suspendStudentUseCase)
 
 	router := httpserver.NewRouter(httpserver.RouterConfig{
-		DB:         pool,
-		JWTSecret:  cfg.JWTSecret,
-		CORSOrigin: cfg.CORSOrigin,
-		Students:   studentHandler,
+		DB:                pool,
+		JWTPublicKey:      cfg.JWTPublicKey,
+		InternalJWTSecret: cfg.InternalJWTSecret,
+		CORSOrigin:        cfg.CORSOrigin,
+		Students:          studentHandler,
 	})
 
 	srv := &http.Server{
