@@ -9,12 +9,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/middleware"
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/response"
 	in "github.com/code-corhuila/lms-membership-api/internal/application/port/in"
 	"github.com/code-corhuila/lms-membership-api/internal/application/usecase"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/membership"
 	"github.com/code-corhuila/lms-membership-api/internal/domain/shared"
-	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/middleware"
-	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/response"
 )
 
 // StudentHandler implements the /students endpoints (HU-02, HU-03). It depends on
