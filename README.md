@@ -109,6 +109,24 @@ Keep the hexagonal layout already in place: domain with its ports and tests, use
 
 The full map lives in `library-docs`.
 
+## Authorization (ADR-012)
+
+Every protected `/students` route now declares the permission it needs (`students:read` or
+`students:write`) and checks it against `lms-iam`'s `GET /api/v1/iam/authorize`
+(`internal/adapter/out/iamclient`, `internal/adapter/in/httpapi/middleware/authz.go`) — closes
+T2/SEC-04 from the week-13 security threat model.
+
+**Opt-in, additive rollout:** `IAM_SERVICE_URL` unset disables the check entirely
+(`RouterConfig.Authorizer` stays `nil`) — this service behaves exactly as before `lms-iam`
+existed until that variable is actually configured. Once configured, an administrator with no
+role assignment in `lms-iam` still defaults to allowed (`ADR-012`'s own backward-compatible
+default), so turning the check on does not lock anyone out by itself.
+
+**Fails closed:** if `lms-iam` is unreachable or errors, the request is rejected (`500`), not
+silently allowed through — a deliberate choice, not an oversight; see `ADR-012`'s own risk table
+for the single-point-of-failure trade-off this implies once `IAM_SERVICE_URL` is actually set in
+a real environment.
+
 ---
 
 ## Branching
