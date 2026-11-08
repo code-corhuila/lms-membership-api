@@ -13,7 +13,9 @@ import (
 
 	httpserver "github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi"
 	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/handler"
+	"github.com/code-corhuila/lms-membership-api/internal/adapter/in/httpapi/middleware"
 	circulationclient "github.com/code-corhuila/lms-membership-api/internal/adapter/out/circulationclient"
+	iamclient "github.com/code-corhuila/lms-membership-api/internal/adapter/out/iamclient"
 	"github.com/code-corhuila/lms-membership-api/internal/adapter/out/persistence"
 	"github.com/code-corhuila/lms-membership-api/internal/application/usecase"
 	"github.com/code-corhuila/lms-membership-api/internal/config"
@@ -62,12 +64,20 @@ func run() error {
 	suspendStudentUseCase := usecase.NewSuspendStudent(studentRepo)
 	studentHandler := handler.NewStudentHandler(createStudentUseCase, getStudentUseCase, updateStudentUseCase, deactivateStudentUseCase, searchStudentsUseCase, suspendStudentUseCase)
 
+	// Authorizer stays nil (disabling the permission check, router.go) when
+	// IAM_SERVICE_URL isn't set — ADR-012's additive, opt-in rollout.
+	var authorizer middleware.Authorizer
+	if cfg.IAMServiceURL != "" {
+		authorizer = iamclient.NewClient(cfg.IAMServiceURL, cfg.InternalJWTSecret)
+	}
+
 	router := httpserver.NewRouter(httpserver.RouterConfig{
 		DB:                pool,
 		JWTPublicKey:      cfg.JWTPublicKey,
 		InternalJWTSecret: cfg.InternalJWTSecret,
 		CORSOrigin:        cfg.CORSOrigin,
 		Students:          studentHandler,
+		Authorizer:        authorizer,
 	})
 
 	srv := &http.Server{
