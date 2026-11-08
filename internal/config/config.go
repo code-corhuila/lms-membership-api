@@ -43,6 +43,13 @@ type Config struct {
 	// CirculationServiceURL is where DeactivateStudent asks whether a student
 	// has active loans — Membership no longer has DB access to that table.
 	CirculationServiceURL string
+
+	// IAMServiceURL is where every protected route checks its required
+	// permission (ADR-012-iam-service-scope.md). Empty by default — a
+	// rollout decision, not an oversight: an unset URL disables the
+	// authorization check entirely (router.go), so adopting lms-iam never
+	// requires touching this service's required configuration first.
+	IAMServiceURL string
 }
 
 func Load() (*Config, error) {
@@ -79,6 +86,8 @@ func Load() (*Config, error) {
 		CORSOrigin: getEnv("CORS_ORIGIN", "*"),
 
 		CirculationServiceURL: getEnv("CIRCULATION_SERVICE_URL", "http://circulation-service:8080"),
+
+		IAMServiceURL: getEnv("IAM_SERVICE_URL", ""),
 	}
 
 	if cfg.InternalJWTSecret == "" {
