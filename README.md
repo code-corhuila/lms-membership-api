@@ -56,6 +56,13 @@ Administrator session; **HS256**, verified with a separate `INTERNAL_JWT_SECRET`
 tokens `internal/adapter/out/circulationclient` mints to call `lms-circulation-api`. Never the
 same key for both — see `internal/adapter/in/httpapi/middleware/auth.go`'s doc comment for why.
 
+## Internal caller allow-list (ADR-013)
+
+`GET /students/{id}` requires `sub=circulation-service`; `POST /students/{id}/suspend` requires
+`sub` in `{circulation-service, lms-workflow}` (`middleware.RequireCaller`) — the only legitimate
+callers today. A valid internal token minted for any other service, or a real Administrator
+session, gets `403` on these two routes. Closes **SEC-03** from the week-13 threat model (T1/T2).
+
 ## Known gaps against `rules/2-anexos/C-api-hexagonal.md`
 
 - **Idempotent creation is durable now, not provisional.** `POST /students` honors
