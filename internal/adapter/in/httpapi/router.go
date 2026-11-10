@@ -41,10 +41,11 @@ func NewRouter(cfg RouterConfig) http.Handler {
 			protected.Route("/students", func(students chi.Router) {
 				students.Post("/", cfg.Students.Create)                    // HU-02
 				students.Get("/", cfg.Students.List)                       // HU-03
-				students.Get("/{id}", cfg.Students.Get)                    // needed by circulation-service
+				students.With(middleware.RequireCaller("circulation-service")).Get("/{id}", cfg.Students.Get) // ADR-013: internal-only
 				students.Patch("/{id}", cfg.Students.Update)               // HU-03
 				students.Post("/{id}/deactivate", cfg.Students.Deactivate) // HU-03
-				students.Post("/{id}/suspend", cfg.Students.Suspend)       // needed by circulation-service
+				students.With(middleware.RequireCaller("circulation-service", "lms-workflow")).
+					Post("/{id}/suspend", cfg.Students.Suspend) // ADR-013: internal-only
 			})
 		})
 	})
