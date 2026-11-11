@@ -74,7 +74,7 @@ session, gets `403` on these two routes. Closes **SEC-03** from the week-13 thre
 
 ## Tech Stack
 
-* **Language:** Go 1.25
+* **Language:** Go 1.26
 * **Router:** chi
 * **Database driver:** pgx (PostgreSQL, schema owned by `lms-membership-db`)
 
